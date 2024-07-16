@@ -1,31 +1,29 @@
-interface Parser.Core
-    exposes [
-        Parser,
-        ParseResult,
-        parse,
-        parsePartial,
-        fail,
-        const,
-        alt,
-        keep,
-        skip,
-        oneOf,
-        map,
-        map2,
-        map3,
-        lazy,
-        maybe,
-        oneOrMore,
-        many,
-        between,
-        sepBy,
-        sepBy1,
-        ignore,
-        buildPrimitiveParser,
-        flatten,
-        andThen,
-    ]
-    imports []
+module [
+    Parser,
+    ParseResult,
+    parse,
+    parsePartial,
+    fail,
+    const,
+    alt,
+    keep,
+    skip,
+    oneOf,
+    map,
+    map2,
+    map3,
+    lazy,
+    maybe,
+    oneOrMore,
+    many,
+    between,
+    sepBy,
+    sepBy1,
+    ignore,
+    buildPrimitiveParser,
+    flatten,
+    andThen,
+]
 
 ## Opaque type for a parser that will try to parse an `a` from an `input`.
 ##
@@ -109,7 +107,7 @@ alt = \first, second ->
                 when parsePartial second input is
                     Ok { val: val, input: rest } -> Ok { val: val, input: rest }
                     Err (ParsingFailure secondErr) ->
-                        Err (ParsingFailure ("\(firstErr) or \(secondErr)"))
+                        Err (ParsingFailure ("$(firstErr) or $(secondErr)"))
 
 ## Runs a parser building a function, then a parser building a value,
 ## and finally returns the result of calling the function with the value.

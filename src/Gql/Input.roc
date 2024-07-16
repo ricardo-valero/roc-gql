@@ -1,31 +1,29 @@
-interface Gql.Input
-    exposes [
-        Argument,
-        Input,
-        TypeMeta,
-        ObjectMeta,
-        Type,
-        Error,
-        Anonymous,
-        arguments,
-        decode,
-        const,
-        required,
-        optional,
-        optionalList,
-        none,
-        string,
-        int,
-        boolean,
-        object,
-        toType,
-        map,
-        errToStr,
-        typeToStr,
-    ]
-    imports [
-        Gql.Value.{ Value },
-    ]
+module [
+    Argument,
+    Input,
+    TypeMeta,
+    ObjectMeta,
+    Type,
+    Error,
+    Anonymous,
+    arguments,
+    decode,
+    const,
+    required,
+    optional,
+    optionalList,
+    none,
+    string,
+    int,
+    boolean,
+    object,
+    toType,
+    map,
+    errToStr,
+    typeToStr,
+]
+
+import Gql.Value exposing [Value]
 
 # This API has grown organically and it's probably due for a redesign!
 
@@ -48,17 +46,17 @@ Error : {
 
 errToStr : Error -> Str
 errToStr = \error ->
-    pathStr = "`\(error.path |> Str.joinWith ".")`"
+    pathStr = "`$(error.path |> Str.joinWith ".")`"
 
     when error.problem is
         Missing ->
-            "Missing argument \(pathStr)"
+            "Missing argument $(pathStr)"
 
         NullValue ->
-            "Null value for argument \(pathStr)"
+            "Null value for argument $(pathStr)"
 
         InvalidValue typeMeta value ->
-            "Invalid value for argument \(pathStr). Expected \(typeToStr typeMeta) but got \(Gql.Value.typeToStr value)"
+            "Invalid value for argument $(pathStr). Expected $(typeToStr typeMeta) but got $(Gql.Value.typeToStr value)"
 
 TypeMeta : [
     String,
@@ -90,7 +88,7 @@ typeToStr = \typeMeta ->
 
         Nullable inner ->
             # TODO: Format ! properly
-            "Nullable \(typeToStr inner)"
+            "Nullable $(typeToStr inner)"
 
         Object { name } ->
             name

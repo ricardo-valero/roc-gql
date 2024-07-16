@@ -1,6 +1,6 @@
-interface Gql.Value
-    exposes [Value, fromDocument, maybe, toJson, get, typeToStr]
-    imports [Gql.Document]
+module [Value, fromDocument, maybe, toJson, get, typeToStr]
+
+import Gql.Document
 
 Value : [
     Int I32,
@@ -211,21 +211,21 @@ toJson = \val ->
                 |> List.map toJson
                 |> Str.joinWith ","
 
-            "[\(items)]"
+            "[$(items)]"
 
         Object fields ->
             items =
                 fields
                 |> List.map \(key, value) ->
-                    "\(strToJson key):\(toJson value)"
+                    "$(strToJson key):$(toJson value)"
                 |> Str.joinWith ","
 
-            "{\(items)}"
+            "{$(items)}"
 
 strToJson : Str -> Str
 strToJson = \str ->
     # TODO: Escape
-    "\"\(str)\""
+    "\"$(str)\""
 
 expect
     input =

@@ -1,34 +1,32 @@
-interface Parser.Str
-    exposes [
-        RawStr,
-        parseStr,
-        parseStrPartial,
-        parseRawStr,
-        parseRawStrPartial,
-        string,
-        stringRaw,
-        codeunit,
-        codeunitSatisfies,
-        anyString,
-        anyRawString,
-        anyCodeunit,
-        scalar,
-        oneOf,
-        digit,
-        positiveInt,
-        strFromRaw,
-    ]
-    imports [
-        Parser.Core.{
-            Parser,
-            ParseResult,
-            map,
-            oneOrMore,
-            parse,
-            parsePartial,
-            buildPrimitiveParser,
-        },
-    ]
+module [
+    RawStr,
+    parseStr,
+    parseStrPartial,
+    parseRawStr,
+    parseRawStrPartial,
+    string,
+    stringRaw,
+    codeunit,
+    codeunitSatisfies,
+    anyString,
+    anyRawString,
+    anyCodeunit,
+    scalar,
+    oneOf,
+    digit,
+    positiveInt,
+    strFromRaw,
+]
+
+import Parser.Core exposing [
+    Parser,
+    ParseResult,
+    map,
+    oneOrMore,
+    parse,
+    parsePartial,
+    buildPrimitiveParser,
+]
 
 # Specific string-based parsers:
 RawStr : List U8
@@ -105,7 +103,7 @@ codeunitSatisfies = \check ->
                     otherChar = strFromCodeunit startCodeunit
                     inputStr = strFromRaw input
 
-                    Err (ParsingFailure "expected a codeunit satisfying a condition but found `\(otherChar)`.\n While reading: `\(inputStr)`")
+                    Err (ParsingFailure "expected a codeunit satisfying a condition but found `$(otherChar)`.\n While reading: `$(inputStr)`")
 
 # Implemented manually instead of on top of codeunitSatisfies
 # because of better error messages
@@ -118,7 +116,7 @@ codeunit = \expectedCodeUnit ->
             Err OutOfBounds ->
                 errorChar = strFromCodeunit expectedCodeUnit
 
-                Err (ParsingFailure "expected char `\(errorChar)` but input was empty.")
+                Err (ParsingFailure "expected char `$(errorChar)` but input was empty.")
 
             Ok startCodeunit ->
                 if startCodeunit == expectedCodeUnit then
@@ -128,7 +126,7 @@ codeunit = \expectedCodeUnit ->
                     otherChar = strFromRaw start
                     inputStr = strFromRaw input
 
-                    Err (ParsingFailure "expected char `\(errorChar)` but found `\(otherChar)`.\n While reading: `\(inputStr)`")
+                    Err (ParsingFailure "expected char `$(errorChar)` but found `$(otherChar)`.\n While reading: `$(inputStr)`")
 
 # Implemented manually instead of a sequence of codeunits
 # because of efficiency and better error messages
@@ -144,7 +142,7 @@ stringRaw = \expectedString ->
             otherString = strFromRaw start
             inputString = strFromRaw input
 
-            Err (ParsingFailure "expected string `\(errorString)` but found `\(otherString)`.\nWhile reading: \(inputString)")
+            Err (ParsingFailure "expected string `$(errorString)` but found `$(otherString)`.\nWhile reading: $(inputString)")
 
 string : Str -> Parser RawStr Str
 string = \expectedString ->

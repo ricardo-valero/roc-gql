@@ -1,33 +1,33 @@
-interface Gql.Output
-    exposes [
-        TypeMeta,
-        Type,
-        ResolveErr,
-        FieldMeta,
-        ObjectMeta,
-        EnumMeta,
-        EnumCaseMeta,
-        OpContext,
-        string,
-        int,
-        boolean,
-        listOf,
-        nullable,
-        ref,
-        object,
-        field,
-        retField,
-        addField,
-        mapField,
-        resolveObject,
-        objectMeta,
-        resolveErrToStr,
-    ] imports [
-        Gql.Document.{ CanSelection, Document },
-        Gql.Docs.{ Describe, Deprecate },
-        Gql.Value.{ Value },
-        Gql.Input.{ Input, Argument },
-    ]
+module [
+    TypeMeta,
+    Type,
+    ResolveErr,
+    FieldMeta,
+    Object,
+    ObjectMeta,
+    EnumMeta,
+    EnumCaseMeta,
+    OpContext,
+    string,
+    int,
+    boolean,
+    listOf,
+    nullable,
+    ref,
+    object,
+    field,
+    retField,
+    addField,
+    mapField,
+    resolveObject,
+    objectMeta,
+    resolveErrToStr,
+]
+
+import Gql.Document exposing [CanSelection, Document]
+import Gql.Docs exposing [Describe, Deprecate]
+import Gql.Value exposing [Value]
+import Gql.Input exposing [Input, Argument]
 
 Type a out : {
     type : TypeMeta,
@@ -78,14 +78,14 @@ resolveErrToStr : ResolveErr -> Str
 resolveErrToStr = \err ->
     when err is
         FieldNotFound objName fieldName ->
-            "Field `\(fieldName)` not found on `\(objName)`"
+            "Field `$(fieldName)` not found on `$(objName)`"
 
         InputErr fieldName inputErr ->
             # TODO: Show object name
-            "On `\(fieldName)`: \(Gql.Input.errToStr inputErr)"
+            "On `$(fieldName)`: $(Gql.Input.errToStr inputErr)"
 
         VarNotFound varName ->
-            "Variable \(varName) not found"
+            "Variable $(varName) not found"
 
 Object a out := {
     meta : ObjectMeta,
@@ -289,4 +289,3 @@ resolveObject = \@Object obj, strToOut, a, selectionSet, opCtx ->
                 |> Result.map
 
             (outName, value)
-

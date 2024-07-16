@@ -1,43 +1,41 @@
-interface Gql.Parse
-    exposes [parseDocument, errToStr]
-    imports [
-        Parser.Core.{
-            Parser,
-            map,
-            map2,
-            between,
-            fail,
-            const,
-            keep,
-            skip,
-            many,
-            oneOrMore,
-            sepBy1,
-            sepBy,
-            maybe,
-            andThen,
-        },
-        Parser.Str.{
-            RawStr,
-            parseStr,
-            strFromRaw,
-            codeunit,
-            codeunitSatisfies,
-            oneOf,
-            string,
-        },
-        Gql.Document.{
-            Document,
-            Definition,
-            OperationType,
-            VariableDefinition,
-            Type,
-            NamedOrListType,
-            Selection,
-            Argument,
-            Value,
-        },
-    ]
+module [parseDocument, errToStr]
+
+import Parser.Core exposing [
+    Parser,
+    map,
+    map2,
+    between,
+    fail,
+    const,
+    keep,
+    skip,
+    many,
+    oneOrMore,
+    sepBy1,
+    sepBy,
+    maybe,
+    andThen,
+]
+import Parser.Str exposing [
+    RawStr,
+    parseStr,
+    strFromRaw,
+    codeunit,
+    codeunitSatisfies,
+    oneOf,
+    string,
+]
+import Gql.Document exposing [
+    Document,
+    Definition,
+    OperationType,
+    VariableDefinition,
+    Type,
+    NamedOrListType,
+    Selection,
+    Argument,
+    Value,
+]
 
 # https://spec.graphql.org/October2021
 
@@ -51,10 +49,10 @@ errToStr : Error -> Str
 errToStr = \err ->
     when err is
         ParsingFailure failure ->
-            "Parse failure: \(failure)"
+            "Parse failure: $(failure)"
 
         ParsingIncomplete incomplete ->
-            "Incomplete parsing error: \(incomplete)"
+            "Incomplete parsing error: $(incomplete)"
 
 # Document
 
