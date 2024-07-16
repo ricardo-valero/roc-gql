@@ -6,3 +6,5 @@ examples/store/store
 
 *.roc-format-failed
 *.roc-format-unstable-*
+
+.direnv/
