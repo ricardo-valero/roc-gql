@@ -11,7 +11,7 @@ module [
     anyString,
     anyRawString,
     anyCodeunit,
-    scalar,
+    # scalar,
     oneOf,
     digit,
     positiveInt,
@@ -41,10 +41,10 @@ strToRaw : Str -> RawStr
 strToRaw = \str ->
     str |> Str.toUtf8
 
-strFromScalar : U32 -> Str
-strFromScalar = \scalarVal ->
-    Str.appendScalar "" (Num.intCast scalarVal)
-    |> Result.withDefault "Unexpected problem while turning a U32 (that was probably originally a scalar constant) into a Str. This should never happen!"
+# strFromScalar : U32 -> Str
+# strFromScalar = \scalarVal ->
+#    Str.appendScalar (Num.intCast scalarVal)
+#    |> Result.withDefault "Unexpected problem while turning a U32 (that was probably originally a scalar constant) into a Str. This should never happen!"
 
 strFromCodeunit : U8 -> Str
 strFromCodeunit = \cu ->
@@ -150,12 +150,12 @@ string = \expectedString ->
     |> stringRaw
     |> map \_val -> expectedString
 
-scalar : U32 -> Parser RawStr U32
-scalar = \expectedScalar ->
-    expectedScalar
-    |> strFromScalar
-    |> string
-    |> map \_ -> expectedScalar
+# scalar : U32 -> Parser RawStr U32
+# scalar = \expectedScalar ->
+#    expectedScalar
+#    |> strFromScalar
+#    |> string
+#    |> map \_ -> expectedScalar
 
 # Matches any codeunit
 anyCodeunit : Parser RawStr U8
