@@ -4,7 +4,7 @@ module [
     executeErrToStr,
 ]
 
-import Gql.Document exposing [Document, Selection]
+import Gql.Document exposing [Document]
 import Gql.Parse exposing [parseDocument]
 import Gql.Value exposing [Value]
 import Gql.Output exposing [

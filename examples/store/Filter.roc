@@ -1,10 +1,8 @@
-interface Filter
-    exposes [Filter, Field, new, input, apply, string, int]
-    imports [
-        gql.Gql.Input.{ Input, Type },
-        pg.Sql,
-        pg.Sql.Types.{ PgBool, PgText, PgI32 },
-    ]
+module [Filter, Field, new, input, apply, string, int]
+
+import gql.Gql.Input exposing [Input, Type]
+import pg.Sql
+import pg.Sql.Types exposing [PgBool, PgText, PgI32]
 
 Filter scope := scope -> List (Sql.Expr (PgBool {}) Bool)
 
