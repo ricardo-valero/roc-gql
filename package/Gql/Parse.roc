@@ -1,6 +1,7 @@
 module [parseDocument, errToStr]
 
-import Parser.Core exposing [
+import Utils exposing [andThen]
+import parser.Core exposing [
     Parser,
     map,
     map2,
@@ -14,16 +15,16 @@ import Parser.Core exposing [
     sepBy1,
     sepBy,
     maybe,
-    andThen,
 ]
-import Parser.Str exposing [
-    RawStr,
+import parser.String exposing [
+    Utf8,
     parseStr,
-    strFromRaw,
+    strFromUtf8,
     codeunit,
     codeunitSatisfies,
     oneOf,
     string,
+    digits,
 ]
 import Gql.Document exposing [
     Document,
@@ -56,7 +57,7 @@ errToStr = \err ->
 
 # Document
 
-document : Parser RawStr Document
+document : Parser Utf8 Document
 document =
     const identity
     |> skip ignored
@@ -88,7 +89,7 @@ expect
         }
 
         fragment PostDetails on Post {
-            id 
+            id
             title
             body {
                 __typename
@@ -174,7 +175,7 @@ expect
 
 # Definition
 
-definition : Parser RawStr Definition
+definition : Parser Utf8 Definition
 definition =
     oneOf [
         operationDefinition,
@@ -183,7 +184,7 @@ definition =
 
 # Operation Definition
 
-operationDefinition : Parser RawStr Definition
+operationDefinition : Parser Utf8 Definition
 operationDefinition =
     const \typ -> \nam -> \vars -> \ss -> Operation { type: typ, name: nam, variables: vars, selectionSet: ss }
     |> keep (maybe opType |> withDefault Query)
@@ -194,7 +195,7 @@ operationDefinition =
     |> skip ignored
     |> keep selectionSet
 
-opType : Parser RawStr OperationType
+opType : Parser Utf8 OperationType
 opType =
     oneOf [
         string "query" |> map \_ -> Query,
@@ -272,7 +273,7 @@ expect
 
 # Variable Definition
 
-variableDefinitions : Parser RawStr (List VariableDefinition)
+variableDefinitions : Parser Utf8 (List VariableDefinition)
 variableDefinitions =
     const identity
     |> skip (codeunit '(')
@@ -281,7 +282,7 @@ variableDefinitions =
     |> skip ignored
     |> skip (codeunit ')')
 
-variableDefinition : Parser RawStr VariableDefinition
+variableDefinition : Parser Utf8 VariableDefinition
 variableDefinition =
     const \vname -> \typ -> \dv -> { name: vname, type: typ, default: dv }
     |> keep variable
@@ -314,13 +315,13 @@ expect
         default: Ok (List [String "1", String "2"]),
     }
 
-variable : Parser RawStr Str
+variable : Parser Utf8 Str
 variable =
     const identity
     |> skip (codeunit '$')
     |> keep name
 
-defaultValue : Parser RawStr Value
+defaultValue : Parser Utf8 Value
 defaultValue =
     const identity
     |> skip (codeunit '=')
@@ -329,7 +330,7 @@ defaultValue =
 
 # Type
 
-type : Parser RawStr Type
+type : Parser Utf8 Type
 type =
     oneOf [
         nonNullType,
@@ -343,25 +344,25 @@ expect parseStr type "[User!]" == Ok (Named "User" |> NonNull |> ListT |> Nullab
 expect parseStr type "[User!]!" == Ok (Named "User" |> NonNull |> ListT |> NonNull)
 expect parseStr type "[[User]!]!" == Ok (Named "User" |> Nullable |> ListT |> NonNull |> ListT |> NonNull)
 
-nonNullType : Parser RawStr Type
+nonNullType : Parser Utf8 Type
 nonNullType =
     const NonNull
     |> keep namedOrListType
     |> skip ignored
     |> skip (codeunit '!')
 
-namedOrListType : Parser RawStr NamedOrListType
+namedOrListType : Parser Utf8 NamedOrListType
 namedOrListType =
     oneOf [
         namedType,
         listType,
     ]
 
-namedType : Parser RawStr NamedOrListType
+namedType : Parser Utf8 NamedOrListType
 namedType =
     name |> map Named
 
-listType : Parser RawStr NamedOrListType
+listType : Parser Utf8 NamedOrListType
 listType =
     const ListT
     |> skip (codeunit '[')
@@ -372,7 +373,7 @@ listType =
 
 # Fragment Definition
 
-fragmentDefinition : Parser RawStr Definition
+fragmentDefinition : Parser Utf8 Definition
 fragmentDefinition =
     const \fname -> \typeName -> \ss -> Fragment { name: fname, typeName, selectionSet: ss }
     |> skip (string "fragment")
@@ -383,7 +384,7 @@ fragmentDefinition =
     |> skip ignored
     |> keep selectionSet
 
-typeCondition : Parser RawStr Str
+typeCondition : Parser Utf8 Str
 typeCondition =
     const identity
     |> skip (string "on")
@@ -410,7 +411,7 @@ expect
             }
         )
 
-fragmentName : Parser RawStr Str
+fragmentName : Parser Utf8 Str
 fragmentName =
     fname <- name |> andThen
 
@@ -424,7 +425,7 @@ expect parseStr fragmentName "on" |> Result.isErr
 
 # Selection
 
-selection : Parser RawStr Selection
+selection : Parser Utf8 Selection
 selection =
     oneOf [
         field,
@@ -434,7 +435,7 @@ selection =
 
 # Selection Set
 
-selectionSet : Parser RawStr (List Selection)
+selectionSet : Parser Utf8 (List Selection)
 selectionSet =
     const identity
     |> skip (codeunit '{')
@@ -457,7 +458,7 @@ expect
         """
         {
             ...UserDetails,
-            fullName: name, 
+            fullName: name,
               email
             phone
             ... on Admin {
@@ -483,7 +484,7 @@ expect parseStr selectionSet "name}" |> Result.isErr
 
 # Field
 
-field : Parser RawStr Selection
+field : Parser Utf8 Selection
 field =
     const \left -> \right -> \args -> \ss -> mkField left right args ss
     |> keep name
@@ -564,7 +565,7 @@ expect
 
 # Argument
 
-arguments : Parser RawStr (List Argument)
+arguments : Parser Utf8 (List Argument)
 arguments =
     const identity
     |> skip (codeunit '(')
@@ -573,7 +574,7 @@ arguments =
     |> skip ignored
     |> skip (codeunit ')')
 
-argument : Parser RawStr Argument
+argument : Parser Utf8 Argument
 argument =
     const \k -> \v -> (k, v)
     |> keep name
@@ -584,7 +585,7 @@ argument =
 
 # Value
 
-value : Parser RawStr Value
+value : Parser Utf8 Value
 value =
     oneOf [
         variableValue,
@@ -616,8 +617,8 @@ expect parseStr value "[42, 123, 234]" == Ok (List [Int 42, Int 123, Int 234])
 expect parseStr value "[\"john\", \"Mike\"]" == Ok (List [String "john", String "Mike"])
 expect parseStr value "{}" == Ok (Object [])
 expect
-    parseStr value "{ id: $id name: \"John\", age :56, status: ACTIVE }"
-    == Ok
+    actual = parseStr value "{ id: $id name: \"John\", age :56, status: ACTIVE }"
+    expected = Ok
         (
             Object [
                 ("id", Var "id"),
@@ -626,10 +627,11 @@ expect
                 ("status", Enum "ACTIVE"),
             ]
         )
+    actual == expected
 
 # Value: Var
 
-variableValue : Parser RawStr Value
+variableValue : Parser Utf8 Value
 variableValue =
     const Var
     |> skip (codeunit '$')
@@ -638,16 +640,16 @@ variableValue =
 
 # Value: Int
 
-intValue : Parser RawStr Value
+intValue : Parser Utf8 Value
 intValue =
     # TODO: Be more strict about leading zeroes
-    const \neg -> \num -> if Result.isOk neg then Int -num else Int num
+    const \neg -> \num -> if Result.isOk neg then Int -(Num.toI32 num) else Int (Num.toI32 num)
     |> keep (maybe (codeunit '-'))
-    |> keep Parser.Str.positiveInt
+    |> keep digits
 
 # Value: String
 
-stringValue : Parser RawStr Value
+stringValue : Parser Utf8 Value
 stringValue =
     # TODO: Block strings
     chars <-
@@ -662,7 +664,7 @@ stringValue =
         Err (BadUtf8 _ _) ->
             fail "String value is not valid UTF8"
 
-stringChar : Parser RawStr U8
+stringChar : Parser Utf8 U8
 stringChar =
     oneOf [
         codeunitSatisfies \char ->
@@ -676,7 +678,7 @@ stringChar =
         |> keep escapedChar,
     ]
 
-escapedChar : Parser RawStr U8
+escapedChar : Parser Utf8 U8
 escapedChar =
     oneOf [
         codeunit '"',
@@ -691,7 +693,7 @@ escapedChar =
 
 # Value: Boolean
 
-booleanValue : Parser RawStr Value
+booleanValue : Parser Utf8 Value
 booleanValue =
     oneOf [
         string "true" |> map \_ -> Boolean Bool.true,
@@ -700,20 +702,20 @@ booleanValue =
 
 # Value: Null
 
-nullValue : Parser RawStr Value
+nullValue : Parser Utf8 Value
 nullValue =
     string "null" |> map \_ -> Null
 
 # Value: Enum
 
-enumValue : Parser RawStr Value
+enumValue : Parser Utf8 Value
 enumValue =
     # No need to check for true/false/null because it would never get here
     name |> map Enum
 
 # Value: List
 
-listValue : Parser RawStr Value
+listValue : Parser Utf8 Value
 listValue =
     const List
     |> skip (codeunit '[')
@@ -724,7 +726,7 @@ listValue =
 
 # Value: Object
 
-objectValue : Parser RawStr Value
+objectValue : Parser Utf8 Value
 objectValue =
     const Object
     |> skip (codeunit '{')
@@ -733,7 +735,7 @@ objectValue =
     |> skip ignored
     |> skip (codeunit '}')
 
-objectField : Parser RawStr (Str, Value)
+objectField : Parser Utf8 (Str, Value)
 objectField =
     const \k -> \v -> (k, v)
     |> keep name
@@ -744,7 +746,7 @@ objectField =
 
 # Fragment Spread
 
-fragmentSpread : Parser RawStr Selection
+fragmentSpread : Parser Utf8 Selection
 fragmentSpread =
     const FragmentSpread
     |> skip (string "...")
@@ -753,7 +755,7 @@ fragmentSpread =
 
 # Inline Fragment
 
-inlineFragment : Parser RawStr Selection
+inlineFragment : Parser Utf8 Selection
 inlineFragment =
     const \typ -> \ss -> InlineFragment { typeName: typ, selectionSet: ss }
     |> skip (string "...")
@@ -779,7 +781,7 @@ expect
 
 # Name
 
-name : Parser RawStr Str
+name : Parser Utf8 Str
 name =
     start, maybeContinue <- map2 nameStart (maybe nameContinue)
 
@@ -787,10 +789,10 @@ name =
         Ok continue ->
             continue
             |> List.prepend start
-            |> strFromRaw
+            |> strFromUtf8
 
         Err Nothing ->
-            strFromRaw [start]
+            strFromUtf8 [start]
 
 expect parseStr name "x" == Ok "x"
 expect parseStr name "name" == Ok "name"
@@ -855,18 +857,18 @@ withDefault = \parser, def ->
 
 # Workaround for: https://github.com/roc-lang/roc/issues/5682
 
-recursiveSelectionSet : Parser RawStr (List Selection)
+recursiveSelectionSet : Parser Utf8 (List Selection)
 recursiveSelectionSet =
-    Parser.Core.buildPrimitiveParser (\input -> Parser.Core.parsePartial selectionSet input)
+    Core.buildPrimitiveParser (\input -> Core.parsePartial selectionSet input)
 
-recursiveInlineFragment : Parser RawStr Selection
+recursiveInlineFragment : Parser Utf8 Selection
 recursiveInlineFragment =
-    Parser.Core.buildPrimitiveParser (\input -> Parser.Core.parsePartial inlineFragment input)
+    Core.buildPrimitiveParser (\input -> Core.parsePartial inlineFragment input)
 
-recursiveValue : Parser RawStr Value
+recursiveValue : Parser Utf8 Value
 recursiveValue =
-    Parser.Core.buildPrimitiveParser (\input -> Parser.Core.parsePartial value input)
+    Core.buildPrimitiveParser (\input -> Core.parsePartial value input)
 
-recursiveType : Parser RawStr Type
+recursiveType : Parser Utf8 Type
 recursiveType =
-    Parser.Core.buildPrimitiveParser (\input -> Parser.Core.parsePartial type input)
+    Core.buildPrimitiveParser (\input -> Core.parsePartial type input)
