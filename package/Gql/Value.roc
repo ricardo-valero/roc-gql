@@ -1,6 +1,6 @@
-interface Gql.Value
-    exposes [Value, fromDocument, maybe, toJson, get, typeToStr]
-    imports [Gql.Document]
+module [Value, fromDocument, maybe, toJson, get, typeToStr]
+
+import Gql.Document
 
 Value : [
     Int I32,
@@ -122,7 +122,7 @@ maybe = \m, fn ->
 expect maybe (Ok "hi") String == String "hi"
 expect maybe (Err Nothing) String == Null
 
-get : Value, List [Key Str, Index Nat] -> Result Value [NotFound]
+get : Value, List [Key Str, Index U64] -> Result Value [NotFound]
 get = \value, path ->
     { before, others } = List.split path 1
 
@@ -211,21 +211,21 @@ toJson = \val ->
                 |> List.map toJson
                 |> Str.joinWith ","
 
-            "[\(items)]"
+            "[$(items)]"
 
         Object fields ->
             items =
                 fields
                 |> List.map \(key, value) ->
-                    "\(strToJson key):\(toJson value)"
+                    "$(strToJson key):$(toJson value)"
                 |> Str.joinWith ","
 
-            "{\(items)}"
+            "{$(items)}"
 
 strToJson : Str -> Str
 strToJson = \str ->
     # TODO: Escape
-    "\"\(str)\""
+    "\"$(str)\""
 
 expect
     input =
@@ -298,4 +298,3 @@ expect
     result = toJson input
 
     expected == result
-

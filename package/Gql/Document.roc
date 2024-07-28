@@ -1,19 +1,17 @@
-interface Gql.Document
-    exposes [
-        Document,
-        Definition,
-        OperationType,
-        VariableDefinition,
-        Type,
-        NamedOrListType,
-        Selection,
-        Argument,
-        Value,
-        findOperation,
-        canSelection,
-        CanSelection,
-    ]
-    imports []
+module [
+    Document,
+    Definition,
+    OperationType,
+    VariableDefinition,
+    Type,
+    NamedOrListType,
+    Selection,
+    Argument,
+    Value,
+    findOperation,
+    canSelection,
+    CanSelection,
+]
 
 Document : List Definition
 

@@ -1,33 +1,31 @@
-interface Gql.Schema
-    exposes [
-        execute,
-        inputTestSchema,
-        executeErrToStr,
-    ]
-    imports [
-        Gql.Document.{ Document, Selection },
-        Gql.Parse.{ parseDocument },
-        Gql.Value.{ Value },
-        Gql.Output.{
-            ResolveErr,
-            Object,
-            ObjectMeta,
-            EnumMeta,
-            FieldMeta,
-            string,
-            int,
-            boolean,
-            listOf,
-            nullable,
-            ref,
-            object,
-            field,
-            resolveObject,
-        },
-        Gql.Docs.{ describe, deprecate },
-        Gql.Input.{ Argument, const, required, optional },
-        Gql.Enum,
-    ]
+module [
+    execute,
+    inputTestSchema,
+    executeErrToStr,
+]
+
+import Gql.Document exposing [Document]
+import Gql.Parse exposing [parseDocument]
+import Gql.Value exposing [Value]
+import Gql.Output exposing [
+    ResolveErr,
+    Object,
+    ObjectMeta,
+    EnumMeta,
+    FieldMeta,
+    string,
+    int,
+    boolean,
+    listOf,
+    nullable,
+    ref,
+    object,
+    field,
+    resolveObject,
+]
+import Gql.Docs exposing [describe, deprecate]
+import Gql.Input exposing [Argument, const, required, optional]
+import Gql.Enum
 
 ExecuteErr : [
     OperationNotFound,
@@ -82,10 +80,10 @@ executeErrToStr = \err ->
             "Operation not found"
 
         FragmentNotFound name ->
-            "Fragment not found: \(name)"
+            "Fragment not found: $(name)"
 
         RecursiveFragment name ->
-            "Recursive fragment: \(name)"
+            "Recursive fragment: $(name)"
 
         ResolveErr resolveErr ->
             Gql.Output.resolveErrToStr resolveErr
@@ -465,7 +463,7 @@ inputTestSchema =
                     name: <- optional "name" Gql.Input.string,
                 },
                 resolve: \_, { name } ->
-                    "Hi, \(Result.withDefault name "friend")!",
+                    "Hi, $(Result.withDefault name "friend")!",
             },
             field "plus" int {
                 takes: const {
@@ -1192,4 +1190,3 @@ testQuery = \{ schema, query, path, variables ? Dict.empty {} } ->
     |> Result.map Object
     |> Result.try
         \val -> Gql.Value.get val path
-

@@ -1,34 +1,28 @@
-app "posts"
-    packages {
-        pf: "https://github.com/roc-lang/basic-webserver/releases/download/0.2.0/J6CiEdkMp41qNdq-9L3HGoF2cFkafFlArvfU1RtR4rY.tar.br",
-        json: "https://github.com/lukewilliamboswell/roc-json/releases/download/0.5.0/jEPD_1ZLFiFrBeYKiKvHSisU-E3LZJeenfa9nvqJGeE.tar.br",
-        gql: "../src/main.roc",
-    }
-    imports [
-        pf.Task.{ Task },
-        pf.Http.{ Request, Response },
-        pf.Stdout,
-        json.Core,
-        gql.Gql.Schema,
-        gql.Gql.Parse,
-        gql.Gql.Input.{ const, required },
-        gql.Gql.Enum,
-        gql.Gql.Value.{ Value },
-        gql.Gql.Output.{
-            Object,
-            string,
-            int,
-            listOf,
-            nullable,
-            ref,
-            object,
-            field,
-            retField,
-        },
-        # Need to be imported to make compiler happy
-        gql.Gql.Document,
-    ]
-    provides [main] to pf
+app [main] {
+    pf: platform "https://github.com/roc-lang/basic-webserver/releases/download/0.5.0/Vq-iXfrRf-aHxhJpAh71uoVUlC-rsWvmjzTYOJKhu4M.tar.br",
+    json: "https://github.com/lukewilliamboswell/roc-json/releases/download/0.10.0/KbIfTNbxShRX1A1FgXei1SpO5Jn8sgP6HP6PXbi-xyA.tar.br",
+    gql: "../package/main.roc",
+}
+
+import pf.Task exposing [Task]
+import pf.Http exposing [Request, Response]
+import json.Json
+import gql.Gql.Schema
+import gql.Gql.Parse
+import gql.Gql.Input exposing [const, required]
+import gql.Gql.Enum
+import gql.Gql.Value exposing [Value]
+import gql.Gql.Output exposing [
+    Object,
+    string,
+    int,
+    listOf,
+    nullable,
+    ref,
+    object,
+    field,
+    retField,
+]
 
 # -- SCHEMA --
 
@@ -115,48 +109,46 @@ author =
 
 handleReq : Request -> Task Response _
 handleReq = \req ->
-    when req.body is
-        EmptyBody ->
-            Task.ok {
-                status: 400,
-                headers: [],
-                body: "Expected JSON object with GraphQL query" |> Str.toUtf8,
-            }
+    if List.isEmpty req.body then
+        Task.ok {
+            status: 400,
+            headers: [],
+            body: "Expected JSON object with GraphQL query" |> Str.toUtf8,
+        }
+    else
+        data <-
+            req.body
+            |> Decode.fromBytes Json.utf8
+            |> Result.mapErr JsonErr
+            |> Result.try \json ->
+                json.query
+                |> Gql.Parse.parseDocument
+                |> Result.mapErr ParseErr
+            |> Result.try \document ->
+                Gql.Schema.execute {
+                    schema,
+                    document,
+                    operation: First,
+                    variables: Dict.empty {},
+                    rootValue: {},
+                    fromValue: \value -> value,
+                }
+                |> Result.mapErr ExecuteErr
+            |> Task.fromResult
+            |> Task.await
 
-        Body { body } ->
-            data <-
-                body
-                |> Decode.fromBytes Core.json
-                |> Result.mapErr JsonErr
-                |> Result.try \json ->
-                    json.query
-                    |> Gql.Parse.parseDocument
-                    |> Result.mapErr ParseErr
-                |> Result.try \document ->
-                    Gql.Schema.execute {
-                        schema,
-                        document,
-                        operation: First,
-                        variables: Dict.empty {},
-                        rootValue: {},
-                        fromValue: \value -> value,
-                    }
-                    |> Result.mapErr ExecuteErr
-                |> Task.fromResult
-                |> Task.await
-
-            Task.ok {
-                status: 200,
-                headers: [
-                    {
-                        name: "Content-Type",
-                        value: "application/json" |> Str.toUtf8,
-                    },
-                ],
-                body: Object [("data", Object data)]
-                |> Gql.Value.toJson
-                |> Str.toUtf8,
-            }
+        Task.ok {
+            status: 200,
+            headers: [
+                {
+                    name: "Content-Type",
+                    value: "application/json" |> Str.toUtf8,
+                },
+            ],
+            body: Object [("data", Object data)]
+            |> Gql.Value.toJson
+            |> Str.toUtf8,
+        }
 
 main : Request -> Task Response []
 main = \req ->

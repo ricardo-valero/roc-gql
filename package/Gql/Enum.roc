@@ -1,23 +1,20 @@
-interface Gql.Enum
-    exposes [
-        Enum,
-        Case,
-        new,
-        case,
-        with,
-        withCase,
-        type,
-    ]
-    imports [
-        Gql.Output.{
-            EnumValue,
-            EnumMeta,
-            EnumCaseMeta,
-            Type,
-        },
-        Gql.Docs.{ Describe, Deprecate },
-        Gql.Value.{ Value },
-    ]
+module [
+    Enum,
+    Case,
+    new,
+    case,
+    with,
+    withCase,
+    type,
+]
+
+import Gql.Output exposing [
+    EnumMeta,
+    EnumCaseMeta,
+    Type,
+]
+import Gql.Docs exposing [Describe, Deprecate]
+import Gql.Value exposing [Value]
 
 Enum a := {
     meta : EnumMeta,
@@ -96,4 +93,3 @@ type = \@Enum enum, encode -> {
         (@Case caseMeta) = (encode value) enum.value
         Ok (Enum caseMeta.name),
 }
-

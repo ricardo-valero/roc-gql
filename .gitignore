@@ -1,8 +1,10 @@
-src/example
-src/scratch*
-
-examples/posts
-examples/store/store
+# Ignore all files without extensions in the examples directory
+# Ignore all files in the examples directory and subdirectories
+examples/**
+# Un-ignore all directories to allow further rules to be applied
+!examples/**/
+# Un-ignore all files with extensions
+!examples/**/*.*
 
 *.roc-format-failed
 *.roc-format-unstable-*

@@ -1,32 +1,25 @@
-app "pg"
-    packages {
-        pf: "https://github.com/roc-lang/basic-webserver/releases/download/0.2.0/J6CiEdkMp41qNdq-9L3HGoF2cFkafFlArvfU1RtR4rY.tar.br",
-        json: "https://github.com/lukewilliamboswell/roc-json/releases/download/0.5.0/jEPD_1ZLFiFrBeYKiKvHSisU-E3LZJeenfa9nvqJGeE.tar.br",
-        pg: "../../../roc-pg/src/main.roc",
-        gql: "../../src/main.roc",
-    }
-    imports [
-        pf.Task.{ Task, await },
-        pf.Stdout,
-        pf.Http.{ Request, Response },
-        pg.Pg.Client,
-        pg.Sql.{ Selection },
-        json.Core,
-        gql.Gql.Schema,
-        gql.Gql.Parse,
-        gql.Gql.Value.{ Value },
-        gql.Gql.Output.{ Object, object, string, int, field, retField, ResolveErr, Type },
-        gql.Gql.Input.{ const, required, optional },
-        Public,
-        Filter,
-        # Unused but required because of: https://github.com/roc-lang/roc/issues/5477
-        gql.Gql.Document,
-        gql.Gql.Enum,
-        pg.Pg.Result,
-        pg.Pg.Cmd,
-        pf.Tcp,
-    ]
-    provides [main] to pf
+app [main] {
+    pf: platform "https://github.com/roc-lang/basic-webserver/releases/download/0.5.0/Vq-iXfrRf-aHxhJpAh71uoVUlC-rsWvmjzTYOJKhu4M.tar.br",
+    json: "https://github.com/lukewilliamboswell/roc-json/releases/download/0.10.0/KbIfTNbxShRX1A1FgXei1SpO5Jn8sgP6HP6PXbi-xyA.tar.br",
+    pg: "../../../roc-pg/src/main.roc",
+    gql: "../../package/main.roc",
+}
+
+import pf.Task exposing [Task, await]
+import pf.Stdout
+import pf.Http exposing [Request, Response]
+import pg.Pg.Client
+import pg.Sql
+import json.Json
+import gql.Gql.Schema
+import gql.Gql.Parse
+import gql.Gql.Value exposing [Value]
+import gql.Gql.Output exposing [Object, object, string, int, field, retField, ResolveErr, Type]
+import gql.Gql.Input exposing [const, required, optional]
+import Public
+import Filter
+import pg.Pg.Cmd
+import pf.Tcp
 
 # -- SCHEMA --
 
@@ -200,72 +193,70 @@ listRef = \toObj ->
 
 handleReq : Request -> Task Response _
 handleReq = \req ->
-    when req.body is
-        EmptyBody ->
-            Task.ok {
-                status: 400,
-                headers: [],
-                body: "Expected JSON object with GraphQL query" |> Str.toUtf8,
-            }
-
-        Body { body } ->
-            selections <-
-                body
-                |> Decode.fromBytes Core.json
-                |> Result.mapErr JsonErr
-                |> Result.try \json ->
-                    json.query
-                    |> Str.trim
-                    |> Gql.Parse.parseDocument
-                    |> Result.mapErr ParseErr
-                |> Result.try \document ->
-                    Gql.Schema.execute {
-                        schema,
-                        document,
-                        operation: First,
-                        variables: Dict.empty {},
-                        rootValue: {},
-                        fromValue: Sql.into,
-                    }
-                    |> Result.mapErr ExecuteErr
-                |> Task.fromResult
-                |> await
-
-            pgCmd <-
-                selections
-                |> List.map \(name, sel) -> Sql.map sel \value -> (name, value)
-                |> Sql.selectionList
-                |> Sql.querySelection
-                |> Task.fromResult
-                |> Task.mapErr SelectionErr
-                |> Task.await
-
-            client <- Pg.Client.withConnect {
-                    host: "localhost",
-                    port: 5432,
-                    user: "postgres",
-                    database: "roc_pg_example",
+    if List.isEmpty req.body then
+        Task.ok {
+            status: 400,
+            headers: [],
+            body: "Expected JSON object with GraphQL query" |> Str.toUtf8,
+        }
+    else
+        selections <-
+            req.body
+            |> Decode.fromBytes Json.utf8
+            |> Result.mapErr JsonErr
+            |> Result.try \json ->
+                json.query
+                |> Str.trim
+                |> Gql.Parse.parseDocument
+                |> Result.mapErr ParseErr
+            |> Result.try \document ->
+                Gql.Schema.execute {
+                    schema,
+                    document,
+                    operation: First,
+                    variables: Dict.empty {},
+                    rootValue: {},
+                    fromValue: Sql.into,
                 }
+                |> Result.mapErr ExecuteErr
+            |> Task.fromResult
+            |> await
 
-            _ <- Stdout.line (Pg.Cmd.inspect pgCmd) |> Task.await
+        pgCmd <-
+            selections
+            |> List.map \(name, sel) -> Sql.map sel \value -> (name, value)
+            |> Sql.selectionList
+            |> Sql.querySelection
+            |> Task.fromResult
+            |> Task.mapErr SelectionErr
+            |> Task.await
 
-            pgRes <-
-                pgCmd
-                |> Pg.Client.command client
-                |> Task.await
-
-            Task.ok {
-                status: 200,
-                headers: [
-                    {
-                        name: "Content-Type",
-                        value: "application/json" |> Str.toUtf8,
-                    },
-                ],
-                body: Object [("data", Object pgRes)]
-                |> Gql.Value.toJson
-                |> Str.toUtf8,
+        client <- Pg.Client.withConnect {
+                host: "localhost",
+                port: 5432,
+                user: "postgres",
+                database: "roc_pg_example",
             }
+
+        _ <- Stdout.line (Pg.Cmd.inspect pgCmd) |> Task.await
+
+        pgRes <-
+            pgCmd
+            |> Pg.Client.command client
+            |> Task.await
+
+        Task.ok {
+            status: 200,
+            headers: [
+                {
+                    name: "Content-Type",
+                    value: "application/json" |> Str.toUtf8,
+                },
+            ],
+            body: Object [("data", Object pgRes)]
+            |> Gql.Value.toJson
+            |> Str.toUtf8,
+        }
 
 main : Request -> Task Response []
 main = \req ->
@@ -303,7 +294,7 @@ main = \req ->
             respondWithError "Something went wrong while performing the database query" 500
 
         Err (TcpConnectErr err) ->
-            respondWithError "Failed to connect to database: \(Tcp.connectErrToStr err)" 500
+            respondWithError "Failed to connect to database: $(Tcp.connectErrToStr err)" 500
 
 respondWithError : Str, U16 -> Task Response []
 respondWithError = \msg, status ->

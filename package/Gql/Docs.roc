@@ -1,10 +1,9 @@
-interface Gql.Docs
-    exposes [
-        Describe,
-        describe,
-        Deprecate,
-        deprecate,
-    ] imports []
+module [
+    Describe,
+    describe,
+    Deprecate,
+    deprecate,
+]
 
 Describe implements
     describe : v, Str -> v where v implements Describe
