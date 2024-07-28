@@ -1,6 +1,6 @@
 module [Filter, Field, new, input, apply, string, int]
 
-import gql.Gql.Input exposing [Input, Type]
+import gql.Gql.Input exposing [Type]
 import pg.Sql
 import pg.Sql.Types exposing [PgBool, PgText, PgI32]
 
