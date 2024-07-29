@@ -2,17 +2,19 @@ module [
     Document,
     Definition,
     OperationType,
-    VariableDefinition,
+    Variable,
     Type,
-    NamedOrListType,
+    Types,
     Selection,
     Argument,
+    Directive,
     Value,
     findOperation,
     canSelection,
     CanSelection,
 ]
 
+# https://spec.graphql.org/October2021/#sec-Document
 Document : List Definition
 
 Definition : [
@@ -20,40 +22,18 @@ Definition : [
     Fragment Fragment,
 ]
 
-Fragment : {
-    name : Str,
-    typeName : Str,
-    # TODO: Directives
-    selectionSet : List Selection,
-}
-
+# 2.3 Operations
 Operation : {
     type : OperationType,
     name : Result Str [Nothing],
-    variables : List VariableDefinition,
-    # TODO: Directives
+    variables : List Variable,
+    directives : List Directive,
     selectionSet : List Selection,
 }
 
 OperationType : [Query, Mutation, Subscription]
 
-VariableDefinition : {
-    name : Str,
-    type : Type,
-    default : Result Value [Nothing],
-    # TODO: Directives
-}
-
-Type : [
-    Nullable NamedOrListType,
-    NonNull NamedOrListType,
-]
-
-NamedOrListType : [
-    Named Str,
-    ListT Type,
-]
-
+# 2.4 Selection Sets
 Selection : [
     Field
         {
@@ -72,7 +52,37 @@ Selection : [
         },
 ]
 
+Fragment : {
+    name : Str,
+    typeName : Str,
+    # TODO: Directives
+    selectionSet : List Selection,
+}
+
+# 2.10 Variables
+Variable : {
+    name : Str,
+    type : Type,
+    default : Result Value [Nothing],
+    directives : List Directive,
+}
+
+# 2.11 Type References
+Type : [
+    Nullable Types,
+    NonNull Types,
+]
+
+Types : [
+    Named Str,
+    ListT Type,
+]
+
+
+
 Argument : (Str, Value)
+
+Directive : (Str, List Argument)
 
 Value : [
     Var Str,
@@ -111,7 +121,8 @@ expect findOperation [Operation testOp] (ByName "GetUser") == Ok testOp
 expect findOperation [Operation testOp] First == Ok testOp
 expect findOperation [Operation testOp] (ByName "getUser") == Err OperationNotFound
 
-testOp = { type: Query, name: Ok "GetUser", variables: [], selectionSet: [] }
+testOp : Operation
+testOp = { type: Query, name: Ok "GetUser", variables: [], directives: [], selectionSet: [] }
 
 findFragment : Document, Str -> Result Fragment [FragmentNotFound]
 findFragment = \doc, name ->

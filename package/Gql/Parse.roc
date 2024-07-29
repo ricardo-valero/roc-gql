@@ -30,11 +30,12 @@ import Gql.Document exposing [
     Document,
     Definition,
     OperationType,
-    VariableDefinition,
+    Variable,
     Type,
-    NamedOrListType,
+    Types,
     Selection,
     Argument,
+    Directive,
     Value,
 ]
 
@@ -107,6 +108,7 @@ expect
             type: Query,
             name: Ok "GetUser",
             variables: [],
+            directives: [],
             selectionSet: [
                 testField "me"
                 |> withSelection [
@@ -124,9 +126,10 @@ expect
             type: Query,
             name: Ok "Posts",
             variables: [
-                { name: "active", type: NonNull (Named "Boolean"), default: Err Nothing },
-                { name: "after", type: Nullable (Named "Date"), default: Err Nothing },
+                { name: "active", type: NonNull (Named "Boolean"), default: Err Nothing, directives: [] },
+                { name: "after", type: Nullable (Named "Date"), default: Err Nothing, directives: [] },
             ],
+            directives: [],
             selectionSet: [
                 testField "posts"
                 |> withArgs [
@@ -169,6 +172,7 @@ expect
             type: Query,
             name: Err Nothing,
             variables: [],
+            directives: [],
             selectionSet: [testField "user"],
         },
     ]
@@ -182,21 +186,23 @@ definition =
         fragmentDefinition,
     ]
 
-# Operation Definition
+# 2.3 Operations
 
 operationDefinition : Parser Utf8 Definition
 operationDefinition =
-    const \typ -> \nam -> \vars -> \ss -> Operation { type: typ, name: nam, variables: vars, selectionSet: ss }
-    |> keep (maybe opType |> withDefault Query)
+    const \a -> \b -> \c -> \d -> \e -> Operation { type: a, name: b, variables: c, directives: d, selectionSet: e }
+    |> keep (maybe operationType |> withDefault Query)
     |> skip ignored
     |> keep (maybe name)
     |> skip ignored
     |> keep (maybe variableDefinitions |> withDefault [])
     |> skip ignored
+    |> keep (maybe directives |> withDefault [])
+    |> skip ignored
     |> keep selectionSet
 
-opType : Parser Utf8 OperationType
-opType =
+operationType : Parser Utf8 OperationType
+operationType =
     oneOf [
         string "query" |> map \_ -> Query,
         string "mutation" |> map \_ -> Mutation,
@@ -211,6 +217,7 @@ expect
                 type: Query,
                 name: Err Nothing,
                 variables: [],
+                directives: [],
                 selectionSet: [testField "user" |> withSelection [testField "id"]],
             }
         )
@@ -226,8 +233,10 @@ expect
                         name: "id",
                         type: NonNull (Named "ID"),
                         default: Err Nothing,
+                        directives: [],
                     },
                 ],
+                directives: [],
                 selectionSet: [
                     testField "user"
                     |> withArgs [
@@ -245,6 +254,7 @@ expect
                 type: Mutation,
                 name: Ok "LogOut",
                 variables: [],
+                directives: [],
                 selectionSet: [testField "logOut" |> withSelection [testField "success"]],
             }
         )
@@ -256,6 +266,7 @@ expect
                 type: Subscription,
                 name: Err Nothing,
                 variables: [],
+                directives: [],
                 selectionSet: [testField "messages" |> withSelection [testField "id", testField "body"]],
             }
         )
@@ -267,13 +278,14 @@ expect
                 type: Query,
                 name: Err Nothing,
                 variables: [],
+                directives: [],
                 selectionSet: [testField "user" |> withSelection [testField "id"]],
             }
         )
 
-# Variable Definition
+# 2.10 Variables
 
-variableDefinitions : Parser Utf8 (List VariableDefinition)
+variableDefinitions : Parser Utf8 (List Variable)
 variableDefinitions =
     const identity
     |> skip (codeunit '(')
@@ -282,9 +294,9 @@ variableDefinitions =
     |> skip ignored
     |> skip (codeunit ')')
 
-variableDefinition : Parser Utf8 VariableDefinition
+variableDefinition : Parser Utf8 Variable
 variableDefinition =
-    const \vname -> \typ -> \dv -> { name: vname, type: typ, default: dv }
+    const \vname -> \typ -> \dv -> \vdirectives -> { name: vname, type: typ, default: dv, directives: vdirectives }
     |> keep variable
     |> skip ignored
     |> skip (codeunit ':')
@@ -292,6 +304,7 @@ variableDefinition =
     |> keep type
     |> skip ignored
     |> keep (maybe defaultValue)
+    |> keep (maybe directives |> withDefault [])
 
 expect
     parseStr variableDefinition "$id: ID"
@@ -299,6 +312,7 @@ expect
         name: "id",
         type: Nullable (Named "ID"),
         default: Err Nothing,
+        directives: [],
     }
 expect
     parseStr variableDefinition "$active: Boolean! = true"
@@ -306,6 +320,7 @@ expect
         name: "active",
         type: NonNull (Named "Boolean"),
         default: Ok (Boolean Bool.true),
+        directives: [],
     }
 expect
     parseStr variableDefinition "$ids :[ID!]= [\"1\", \"2\"]"
@@ -313,6 +328,7 @@ expect
         name: "ids",
         type: Nullable (ListT (NonNull (Named "ID"))),
         default: Ok (List [String "1", String "2"]),
+        directives: [],
     }
 
 variable : Parser Utf8 Str
@@ -328,7 +344,7 @@ defaultValue =
     |> skip ignored
     |> keep value
 
-# Type
+# 2.11 Type References
 
 type : Parser Utf8 Type
 type =
@@ -351,18 +367,18 @@ nonNullType =
     |> skip ignored
     |> skip (codeunit '!')
 
-namedOrListType : Parser Utf8 NamedOrListType
+namedOrListType : Parser Utf8 Types
 namedOrListType =
     oneOf [
         namedType,
         listType,
     ]
 
-namedType : Parser Utf8 NamedOrListType
+namedType : Parser Utf8 Types
 namedType =
     name |> map Named
 
-listType : Parser Utf8 NamedOrListType
+listType : Parser Utf8 Types
 listType =
     const ListT
     |> skip (codeunit '[')
@@ -582,6 +598,23 @@ argument =
     |> skip (codeunit ':')
     |> skip ignored
     |> keep value
+
+# Directive
+
+directives : Parser Utf8 (List Directive)
+directives =
+    const identity
+    |> skip ignored
+    |> keep (directive |> sepBy1 ignored)
+
+directive : Parser Utf8 Directive
+directive =
+    const \k -> \v -> (k, v)
+    |> skip (codeunit '@')
+    |> skip ignored
+    |> keep name
+    |> skip ignored
+    |> keep (maybe arguments |> withDefault [])
 
 # Value
 
@@ -806,26 +839,26 @@ expect parseStr name "product id" |> Result.isErr
 expect parseStr name "__Type" == Ok "__Type"
 
 nameStart =
-    isAlpha
-    |> orUnderscore
+    isLetter
+    |> or isUnderscore
     |> codeunitSatisfies
 
 nameContinue =
-    isAlphanumeric
-    |> orUnderscore
+    isLetter
+    |> or isDigit
+    |> or isUnderscore
     |> codeunitSatisfies
     |> oneOrMore
 
-orUnderscore = \option -> \code -> option code || code == '_'
+or = \option1, option2 -> \code -> option1 code || option2 code
 
-isAlpha = \code ->
+isUnderscore = \code -> code == '_'
+
+isLetter = \code ->
     (code >= 'A' && code <= 'Z') || (code >= 'a' && code <= 'z')
 
-isNumeric = \code ->
+isDigit = \code ->
     code >= '0' && code <= '9'
-
-isAlphanumeric = \code ->
-    isAlpha code || isNumeric code
 
 # Test field helpers
 
