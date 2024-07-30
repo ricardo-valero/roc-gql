@@ -14,6 +14,10 @@ module [
     CanSelection,
 ]
 
+Opt value : Result value [Nothing]
+
+Name : Str
+
 # https://spec.graphql.org/October2021/#sec-Document
 Document : List Definition
 
@@ -25,7 +29,7 @@ Definition : [
 # 2.3 Operations
 Operation : {
     type : OperationType,
-    name : Result Str [Nothing],
+    name : Opt Name,
     variables : List Variable,
     directives : List Directive,
     selectionSet : List Selection,
@@ -35,25 +39,36 @@ OperationType : [Query, Mutation, Subscription]
 
 # 2.4 Selection Sets
 Selection : [
+    # 2.5 Fields
     Field
         {
-            field : Str,
-            alias : Result Str [Nothing],
+            alias : Opt Name,
+            name : Name,
             arguments : List Argument,
-            # TODO: Directives
+            # directives : List Directive,
             selectionSet : List Selection,
         },
-    FragmentSpread Str,
+    FragmentSpread
+        {
+            name : Name,
+            # directives : List Directive,
+        },
+    # 2.8.2 Inline Fragments
     InlineFragment
         {
-            typeName : Result Str [Nothing],
+            # 2.8.1 Type Conditions
+            typeName : Opt Name,
             # TODO: Directives
             selectionSet : List Selection,
         },
 ]
 
+# 2.6 Arguments
+Argument : (Str, Value)
+
+# 2.8 Fragments
 Fragment : {
-    name : Str,
+    name : Name,
     typeName : Str,
     # TODO: Directives
     selectionSet : List Selection,
@@ -63,7 +78,7 @@ Fragment : {
 Variable : {
     name : Str,
     type : Type,
-    default : Result Value [Nothing],
+    default : Opt Value,
     directives : List Directive,
 }
 
@@ -77,8 +92,6 @@ Types : [
     Named Str,
     ListT Type,
 ]
-
-Argument : (Str, Value)
 
 Directive : (Str, List Argument)
 
@@ -146,8 +159,8 @@ testFragment = { name: "PostDetails", typeName: "Post", selectionSet: [] }
 CanSelection : [
     CanField
         {
-            field : Str,
-            alias : Result Str [Nothing],
+            name : Str,
+            alias : Opt Name,
             arguments : List Argument,
             # TODO: Directives
             selectionSet : List CanSelection,
@@ -167,24 +180,24 @@ canSelectionHelp = \sel, doc, seenFragments ->
 
             [
                 CanField {
-                    field: field.field,
+                    name: field.name,
                     alias: field.alias,
                     arguments: field.arguments,
                     selectionSet: List.join selections,
                 },
             ]
 
-        FragmentSpread name ->
-            if Set.contains seenFragments name then
-                Err (RecursiveFragment name)
+        FragmentSpread spread ->
+            if Set.contains seenFragments spread then
+                Err (RecursiveFragment spread.name)
             else
                 fragment <-
-                    findFragment doc name
-                    |> Result.mapErr \FragmentNotFound -> FragmentNotFound name
+                    findFragment doc spread.name
+                    |> Result.mapErr \FragmentNotFound -> FragmentNotFound spread.name
                     |> Result.try
 
                 newSeenFragments =
-                    seenFragments |> Set.insert name
+                    seenFragments |> Set.insert spread
 
                 fragment.selectionSet
                 |> List.mapTry \subSel -> canSelectionHelp subSel doc newSeenFragments
@@ -199,14 +212,12 @@ expect
             name: "Post",
             typeName: "Post",
             selectionSet: [
-                Field { field: "body", alias: Err Nothing, arguments: [], selectionSet: [] },
+                Field { name: "body", alias: Err Nothing, arguments: [], selectionSet: [] },
                 Field {
-                    field: "author",
+                    name: "author",
                     alias: Err Nothing,
                     arguments: [],
-                    selectionSet: [
-                        FragmentSpread "User",
-                    ],
+                    selectionSet: [FragmentSpread { name: "User" }],
                 },
             ],
         },
@@ -214,35 +225,35 @@ expect
             name: "User",
             typeName: "User",
             selectionSet: [
-                Field { field: "name", alias: Err Nothing, arguments: [], selectionSet: [] },
+                Field { name: "name", alias: Err Nothing, arguments: [], selectionSet: [] },
             ],
         },
     ]
 
     sel = Field {
-        field: "posts",
+        name: "posts",
         alias: Err Nothing,
         arguments: [],
         selectionSet: [
-            Field { field: "title", alias: Err Nothing, arguments: [], selectionSet: [] },
-            FragmentSpread "Post",
+            Field { name: "title", alias: Err Nothing, arguments: [], selectionSet: [] },
+            FragmentSpread { name: "Post" },
         ],
     }
 
     expected = [
         CanField {
-            field: "posts",
+            name: "posts",
             alias: Err Nothing,
             arguments: [],
             selectionSet: [
-                CanField { field: "title", alias: Err Nothing, arguments: [], selectionSet: [] },
-                CanField { field: "body", alias: Err Nothing, arguments: [], selectionSet: [] },
+                CanField { name: "title", alias: Err Nothing, arguments: [], selectionSet: [] },
+                CanField { name: "body", alias: Err Nothing, arguments: [], selectionSet: [] },
                 CanField {
-                    field: "author",
+                    name: "author",
                     alias: Err Nothing,
                     arguments: [],
                     selectionSet: [
-                        CanField { field: "name", alias: Err Nothing, arguments: [], selectionSet: [] },
+                        CanField { name: "name", alias: Err Nothing, arguments: [], selectionSet: [] },
                     ],
                 },
             ],
@@ -256,15 +267,15 @@ expect
         Fragment {
             name: "Post",
             typeName: "Post",
-            selectionSet: [FragmentSpread "Post"],
+            selectionSet: [FragmentSpread { name: "Post" }],
         },
     ]
 
     sel = Field {
-        field: "posts",
+        name: "posts",
         alias: Err Nothing,
         arguments: [],
-        selectionSet: [FragmentSpread "Post"],
+        selectionSet: [FragmentSpread { name: "Post" }],
     }
 
     canSelection sel doc == Err (RecursiveFragment "Post")
@@ -276,20 +287,20 @@ expect
 #            name: "User",
 #            typeName: "User",
 #            selectionSet: [
-#                Field { field: "posts", alias: Err Nothing, arguments: [], selectionSet: [FragmentSpread "Post"] },
+#                Field { name: "posts", alias: Err Nothing, arguments: [], selectionSet: [FragmentSpread {name: "Post"}] },
 #            ],
 #        },
 #        Fragment {
 #            name: "Post",
 #            typeName: "Post",
 #            selectionSet: [
-#                Field { field: "author", alias: Err Nothing, arguments: [], selectionSet: [FragmentSpread "User"] },
+#                Field { name: "author", alias: Err Nothing, arguments: [], selectionSet: [FragmentSpread {name: "User"}] },
 #            ],
 #        },
 #    ]
 #
 #    sel = Field {
-#        field: "posts",
+#        name: "posts",
 #        alias: Err Nothing,
 #        arguments: [],
 #        selectionSet: [FragmentSpread "Post"],

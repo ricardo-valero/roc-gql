@@ -439,7 +439,7 @@ fragmentName =
 expect parseStr fragmentName "UserDetails" == Ok "UserDetails"
 expect parseStr fragmentName "on" |> Result.isErr
 
-# Selection
+# 2.4 Selection Sets
 
 selection : Parser Utf8 Selection
 selection =
@@ -448,8 +448,6 @@ selection =
         fragmentSpread,
         recursiveInlineFragment,
     ]
-
-# Selection Set
 
 selectionSet : Parser Utf8 (List Selection)
 selectionSet =
@@ -466,7 +464,7 @@ expect parseStr selectionSet "{ name }" == Ok [testField "name"]
 expect parseStr selectionSet "{ name email }" == Ok [testField "name", testField "email"]
 expect parseStr selectionSet "{ name\nemail }" == Ok [testField "name", testField "email"]
 expect parseStr selectionSet "{ name, email }" == Ok [testField "name", testField "email"]
-expect parseStr selectionSet "{ ... PostDetails }" == Ok [FragmentSpread "PostDetails"]
+expect parseStr selectionSet "{ ... PostDetails }" == Ok [FragmentSpread { name: "PostDetails" }]
 expect parseStr selectionSet "{ ... on Post { id } }" == Ok [InlineFragment { typeName: Ok "Post", selectionSet: [testField "id"] }]
 expect
     parseStr
@@ -483,7 +481,7 @@ expect
         }
         """
     == Ok [
-        FragmentSpread "UserDetails",
+        FragmentSpread { name: "UserDetails" },
         testField "name" |> withAlias "fullName",
         testField "email",
         testField "phone",
@@ -498,7 +496,7 @@ expect parseStr selectionSet "" |> Result.isErr
 expect parseStr selectionSet "{name" |> Result.isErr
 expect parseStr selectionSet "name}" |> Result.isErr
 
-# Field
+# 2.5 Fields
 
 field : Parser Utf8 Selection
 field =
@@ -515,7 +513,7 @@ mkField = \left, right, args, ss ->
     when right is
         Ok f ->
             Field {
-                field: f,
+                name: f,
                 alias: Ok left,
                 arguments: args,
                 selectionSet: ss,
@@ -523,7 +521,7 @@ mkField = \left, right, args, ss ->
 
         Err Nothing ->
             Field {
-                field: left,
+                name: left,
                 alias: Err Nothing,
                 arguments: args,
                 selectionSet: ss,
@@ -777,16 +775,16 @@ objectField =
     |> skip ignored
     |> keep recursiveValue
 
-# Fragment Spread
+# 2.8 Fragments
 
 fragmentSpread : Parser Utf8 Selection
 fragmentSpread =
-    const FragmentSpread
+    const \fname -> FragmentSpread { name: fname }
     |> skip (string "...")
     |> skip ignored
     |> keep fragmentName
 
-# Inline Fragment
+# 2.8.2 Inline Fragments
 
 inlineFragment : Parser Utf8 Selection
 inlineFragment =
@@ -807,7 +805,7 @@ expect
                 typeName: Ok "Post",
                 selectionSet: [
                     testField "id",
-                    FragmentSpread "PostDetails",
+                    FragmentSpread { name: "PostDetails" },
                 ],
             }
         )
@@ -862,7 +860,7 @@ isDigit = \code ->
 
 # Test field helpers
 
-testField = \fname -> Field { field: fname, alias: Err Nothing, arguments: [], selectionSet: [] }
+testField = \fname -> Field { name: fname, alias: Err Nothing, arguments: [], selectionSet: [] }
 withSelection = \Field fiel, ss -> Field { fiel & selectionSet: ss }
 withAlias = \Field fiel, alias -> Field { fiel & alias: Ok alias }
 withArgs = \Field fiel, args -> Field { fiel & arguments: args }
