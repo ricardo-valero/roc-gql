@@ -4,39 +4,26 @@ import Gql.Document
 
 Value : [
     Int I32,
+    Float Dec,
     String Str,
     Boolean Bool,
     Null,
     Enum Str,
     List (List Value),
     Object (List (Str, Value)),
-    # TODO:
-    # FloatValue
 ]
 
 typeToStr : Value -> Str
 typeToStr = \value ->
     when value is
-        Int _ ->
-            "Int"
-
-        String _ ->
-            "String"
-
-        Boolean _ ->
-            "Boolean"
-
-        Null ->
-            "Null"
-
-        Enum _ ->
-            "Enum"
-
-        List _ ->
-            "List"
-
-        Object _ ->
-            "Object"
+        Int _ -> "Int"
+        Float _ -> "Float"
+        String _ -> "String"
+        Boolean _ -> "Boolean"
+        Null -> "Null"
+        Enum _ -> "Enum"
+        List _ -> "List"
+        Object _ -> "Object"
 
 fromDocument : Gql.Document.Value, Dict Str Value -> Result Value [VarNotFound Str]
 fromDocument = \docValue, variables ->
@@ -46,21 +33,12 @@ fromDocument = \docValue, variables ->
             |> Dict.get name
             |> Result.mapErr \KeyNotFound -> VarNotFound name
 
-        Int value ->
-            Ok (Int value)
-
-        String value ->
-            Ok (String value)
-
-        Boolean value ->
-            Ok (Boolean value)
-
-        Null ->
-            Ok Null
-
-        Enum value ->
-            Ok (Enum value)
-
+        Int value -> Ok (Int value)
+        Float value -> Ok (Float value)
+        String value -> Ok (String value)
+        Boolean value -> Ok (Boolean value)
+        Null -> Ok Null
+        Enum value -> Ok (Enum value)
         List list ->
             list
             |> List.mapTry \value -> fromDocument value variables
@@ -190,21 +168,16 @@ expect Object [("zero", Int 0), ("one", Int 1)] |> get [Index 0] == Err NotFound
 toJson : Value -> Str
 toJson = \val ->
     when val is
-        Int int ->
-            Num.toStr int
-
-        String str | Enum str ->
-            strToJson str
-
+        Int int -> Num.toStr int
+        Float float -> Num.toStr float
+        String str | Enum str -> strToJson str
         Boolean bool ->
             if bool then
                 "true"
             else
                 "false"
 
-        Null ->
-            "null"
-
+        Null -> "null"
         List values ->
             items =
                 values

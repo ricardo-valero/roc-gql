@@ -265,15 +265,15 @@ resolveObject = \@Object obj, strToOut, a, selectionSet, opCtx ->
     |> List.mapTry \CanField opField ->
         outName =
             opField.alias
-            |> Result.withDefault opField.field
+            |> Result.withDefault opField.name
 
-        if opField.field == "__typename" then
+        if opField.name == "__typename" then
             Ok (outName, strToOut obj.meta.name)
         else
             fieldResolver <-
                 obj.resolvers
-                |> Dict.get opField.field
-                |> Result.mapErr \KeyNotFound -> FieldNotFound obj.meta.name opField.field
+                |> Dict.get opField.name
+                |> Result.mapErr \KeyNotFound -> FieldNotFound obj.meta.name opField.name
                 |> Result.try
 
             argsDict <-

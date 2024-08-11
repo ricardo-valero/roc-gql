@@ -114,7 +114,7 @@ expect
                 |> withSelection [
                     testField "id",
                     testField "name",
-                    testField "posts" |> withSelection [FragmentSpread "PostDetails"],
+                    testField "posts" |> withSelection [FragmentSpread { name: "PostDetails" }],
                 ],
                 InlineFragment {
                     typeName: Err Nothing,
@@ -138,7 +138,7 @@ expect
                     ("after", Var "after"),
                 ]
                 |> withSelection [
-                    FragmentSpread "PostDetails",
+                    FragmentSpread { name: "PostDetails" },
                     testField "status",
                 ],
             ],
@@ -861,9 +861,9 @@ isDigit = \code ->
 # Test field helpers
 
 testField = \fname -> Field { name: fname, alias: Err Nothing, arguments: [], selectionSet: [] }
-withSelection = \Field fiel, ss -> Field { fiel & selectionSet: ss }
-withAlias = \Field fiel, alias -> Field { fiel & alias: Ok alias }
-withArgs = \Field fiel, args -> Field { fiel & arguments: args }
+withSelection = \Field f, ss -> Field { f & selectionSet: ss }
+withAlias = \Field f, alias -> Field { f & alias: Ok alias }
+withArgs = \Field f, args -> Field { f & arguments: args }
 
 # Helpers
 

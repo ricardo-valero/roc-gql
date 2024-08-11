@@ -42,6 +42,7 @@ Selection : [
     # 2.5 Fields
     Field
         {
+            # 2.7 Field Alias
             alias : Opt Name,
             name : Name,
             arguments : List Argument,
@@ -95,17 +96,17 @@ Types : [
 
 Directive : (Str, List Argument)
 
+# 2.9 Input Values
 Value : [
     Var Str,
     Int I32,
+    Float Dec,
     String Str,
     Boolean Bool,
     Null,
     Enum Str,
     List (List Value),
     Object (List (Str, Value)),
-    # TODO:
-    # FloatValue
 ]
 
 findOperation : Document, [First, ByName Str] -> Result Operation [OperationNotFound]
@@ -127,13 +128,13 @@ findOperation = \doc, rule ->
         _ ->
             Continue state
 
+testOp : Operation
+testOp = { type: Query, name: Ok "GetUser", variables: [], directives: [], selectionSet: [] }
+
 expect findOperation [] First == Err OperationNotFound
 expect findOperation [Operation testOp] (ByName "GetUser") == Ok testOp
 expect findOperation [Operation testOp] First == Ok testOp
 expect findOperation [Operation testOp] (ByName "getUser") == Err OperationNotFound
-
-testOp : Operation
-testOp = { type: Query, name: Ok "GetUser", variables: [], directives: [], selectionSet: [] }
 
 findFragment : Document, Str -> Result Fragment [FragmentNotFound]
 findFragment = \doc, name ->
@@ -150,11 +151,12 @@ findFragment = \doc, name ->
         _ ->
             Continue state
 
+testFragment : Fragment
+testFragment = { name: "PostDetails", typeName: "Post", selectionSet: [] }
+
 expect findFragment [] "PostDetails" == Err FragmentNotFound
 expect findFragment [Fragment testFragment] "PostDetails" == Ok testFragment
 expect findFragment [Fragment testFragment] "Comment" == Err FragmentNotFound
-
-testFragment = { name: "PostDetails", typeName: "Post", selectionSet: [] }
 
 CanSelection : [
     CanField
@@ -287,23 +289,18 @@ expect
 #            name: "User",
 #            typeName: "User",
 #            selectionSet: [
-#                Field { name: "posts", alias: Err Nothing, arguments: [], selectionSet: [FragmentSpread {name: "Post"}] },
+#                Field { name: "posts", alias: Err Nothing, arguments: [], selectionSet: [FragmentSpread { name: "Post" }] },
 #            ],
 #        },
 #        Fragment {
 #            name: "Post",
 #            typeName: "Post",
 #            selectionSet: [
-#                Field { name: "author", alias: Err Nothing, arguments: [], selectionSet: [FragmentSpread {name: "User"}] },
+#                Field { name: "author", alias: Err Nothing, arguments: [], selectionSet: [FragmentSpread { name: "User" }] },
 #            ],
 #        },
 #    ]
-#
-#    sel = Field {
-#        name: "posts",
-#        alias: Err Nothing,
-#        arguments: [],
-#        selectionSet: [FragmentSpread "Post"],
-#    }
-#
+
+#    sel = Field { name: "posts", alias: Err Nothing, arguments: [], selectionSet: [FragmentSpread { name: "Post" }] }
+
 #    canSelection sel doc == Err (RecursiveFragment "Post")
