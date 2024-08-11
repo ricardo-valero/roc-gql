@@ -1,11 +1,11 @@
-app [main] {
-    pf: platform "https://github.com/roc-lang/basic-webserver/releases/download/0.5.0/Vq-iXfrRf-aHxhJpAh71uoVUlC-rsWvmjzTYOJKhu4M.tar.br",
+app [server] {
+    pf: platform "https://github.com/roc-lang/basic-webserver/releases/download/0.7.0/vUnq0H5KAITUGuzI3av6AHYLS8LnaYI6qzIMsTNHq3M.tar.br",
     json: "https://github.com/lukewilliamboswell/roc-json/releases/download/0.10.0/KbIfTNbxShRX1A1FgXei1SpO5Jn8sgP6HP6PXbi-xyA.tar.br",
     pg: "../../../roc-pg/src/main.roc",
     gql: "../../package/main.roc",
 }
 
-import pf.Task exposing [Task, await]
+import pf.Task exposing [Task]
 import pf.Stdout
 import pf.Http exposing [Request, Response]
 import pg.Pg.Client
@@ -191,6 +191,13 @@ listRef = \toObj ->
 
 # -- PARSE AND EXECUTE --
 
+Model : {}
+
+server = { init, respond }
+
+init : Task Model [Exit I32 Str]_
+init = Task.ok {}
+
 handleReq : Request -> Task Response _
 handleReq = \req ->
     if List.isEmpty req.body then
@@ -220,7 +227,7 @@ handleReq = \req ->
                 }
                 |> Result.mapErr ExecuteErr
             |> Task.fromResult
-            |> await
+            |> Task.await
 
         pgCmd <-
             selections
@@ -247,66 +254,28 @@ handleReq = \req ->
 
         Task.ok {
             status: 200,
-            headers: [
-                {
-                    name: "Content-Type",
-                    value: "application/json" |> Str.toUtf8,
-                },
-            ],
-            body: Object [("data", Object pgRes)]
-            |> Gql.Value.toJson
-            |> Str.toUtf8,
+            headers: [{ name: "Content-Type", value: "application/json" }],
+            body: Object [("data", Object pgRes)] |> Gql.Value.toJson |> Str.toUtf8,
         }
 
-main : Request -> Task Response []
-main = \req ->
-    result <- Task.attempt (handleReq req)
+respond : Request, Model -> Task Response []
+respond = \req, _ ->
+    handleReq req |> Task.onErr handleErr
 
-    when result is
-        Ok ok ->
-            Task.ok ok
-
-        Err (ParseErr err) ->
-            err
-            |> Gql.Parse.errToStr
-            |> respondWithError 400
-
-        Err (JsonErr _) ->
-            "Failed to parse body JSON"
-            |> respondWithError 400
-
-        Err (ExecuteErr err) ->
-            err
-            |> Gql.Schema.executeErrToStr
-            |> respondWithError 400
-
-        Err (SelectionErr err) ->
-            err
-            |> Gql.Output.resolveErrToStr
-            |> respondWithError 400
-
-        Err (TcpPerformErr (PgErr err)) ->
-            err
-            |> Pg.Client.errorToStr
-            |> respondWithError 500
-
-        Err (TcpPerformErr _) ->
-            respondWithError "Something went wrong while performing the database query" 500
-
-        Err (TcpConnectErr err) ->
-            respondWithError "Failed to connect to database: $(Tcp.connectErrToStr err)" 500
+handleErr = \error ->
+    when error is
+        ParseErr err -> err |> Gql.Parse.errToStr |> respondWithError 400
+        JsonErr _ -> "Failed to parse body JSON" |> respondWithError 400
+        ExecuteErr err -> err |> Gql.Schema.executeErrToStr |> respondWithError 400
+        SelectionErr err -> err |> Gql.Output.resolveErrToStr |> respondWithError 400
+        TcpPerformErr (PgErr err) -> err |> Pg.Client.errorToStr |> respondWithError 500
+        TcpPerformErr _ -> "Something went wrong while performing the database query" |> respondWithError 500
+        TcpConnectErr err -> "Failed to connect to database: $(Tcp.connectErrToStr err)" |> respondWithError 500
 
 respondWithError : Str, U16 -> Task Response []
 respondWithError = \msg, status ->
     Task.ok {
         status,
-        headers: [
-            {
-                name: "Content-Type",
-                value: "application/json" |> Str.toUtf8,
-            },
-        ],
-        body: Object [("error", String msg)]
-        |> Gql.Value.toJson
-        |> Str.toUtf8,
+        headers: [{ name: "Content-Type", value: "application/json" }],
+        body: Object [("error", String msg)] |> Gql.Value.toJson |> Str.toUtf8,
     }
